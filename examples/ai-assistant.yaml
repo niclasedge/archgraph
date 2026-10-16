@@ -1,0 +1,110 @@
+description: |-
+  Internal support assistant
+
+  An LLM answers employee questions from company documents and can open tickets. All names are fictional.
+
+resources:
+  - name: Employees
+    subtitle: Askers
+    color: gray
+    style: plural
+    icon: Networking/user.svg
+
+  - name: Support Platform
+    subtitle: Internal platform
+    color: navy
+    children:
+      - name: API Gateway
+        subtitle: Auth, rate limits, audit log
+        color: teal
+        icon: Networking/firewall.svg
+
+      - name: Assistant Service
+        subtitle: Orchestrator
+        color: blue
+        icon: Networking/cloud-server.svg
+        description: Prompt, tools, ticket logic
+
+      - name: Retriever
+        subtitle: RAG
+        color: blue
+        icon: Networking/server.svg
+
+      - name: Vector Store
+        subtitle: Document embeddings
+        color: purple
+        icon: Networking/database.svg
+
+      - name: Ingestion Job
+        subtitle: Nightly sync
+        color: blue
+        icon: Networking/server.svg
+
+  - name: Document Sources
+    subtitle: Wiki and file share
+    color: gray
+    icon: Networking/database.svg
+
+  - name: LLM Provider
+    subtitle: External API
+    color: firebrick
+    icon: Networking/internet.svg
+
+  - name: Ticket System
+    subtitle: Service desk
+    color: orange
+    icon: Networking/cloud-server.svg
+
+perspectives:
+  - name: Request flow
+    notes: |-
+      What happens when an employee asks a question.
+      Switch to **Knowledge pipeline** to see how documents get into the vector store.
+    relations:
+      - from: Employees
+        to: API Gateway
+        label: Question
+      - from: API Gateway
+        to: Assistant Service
+        label: Authenticated request
+      - from: Assistant Service
+        to: Retriever
+        label: Find passages
+      - from: Retriever
+        to: Vector Store
+        label: Similarity search
+      - from: Assistant Service
+        to: LLM Provider
+        label: Prompt with passages
+      - from: Assistant Service
+        to: Ticket System
+        label: Open ticket
+        description: Only when the model reports low confidence or the user asks for a human.
+
+  - name: Knowledge pipeline
+    notes: |-
+      How documents become searchable. The pipeline runs nightly and is independent of user traffic.
+    relations:
+      - from: Ingestion Job
+        to: Document Sources
+        label: Fetch changed documents
+      - from: Ingestion Job
+        to: LLM Provider
+        label: Embed chunks
+      - from: Ingestion Job
+        to: Vector Store
+        label: Upsert embeddings
+
+  - name: Data boundary
+    notes: |-
+      Which calls leave the platform. Only the gateway is reachable from outside; the LLM Provider is the single outbound dependency for user content.
+    relations:
+      - from: Employees
+        to: API Gateway
+        label: HTTPS, SSO
+      - from: Assistant Service
+        to: LLM Provider
+        label: Outbound, PII redacted
+      - from: Assistant Service
+        to: Ticket System
+        label: Outbound, ticket text only
